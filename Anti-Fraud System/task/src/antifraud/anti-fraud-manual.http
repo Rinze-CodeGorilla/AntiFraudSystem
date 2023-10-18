@@ -1,0 +1,57 @@
+### Create admin, should 201
+POST http://localhost:28852/api/auth/user
+Content-Type: application/json
+
+{
+  "username": "rs",
+  "name": "Rinze",
+  "password": "123"
+}
+
+### Create user, should 201
+POST http://localhost:28852/api/auth/user
+Content-Type: application/json
+
+{
+  "username": "rs1",
+  "name": "Rinze",
+  "password": "123"
+}
+
+### Perform transaction as merchant, should 401
+POST http://localhost:28852/api/antifraud/transaction
+Content-Type: application/json
+
+{
+  "amount": 100
+}
+
+### Unlock user, should 200
+PUT http://localhost:28852/api/auth/access
+Content-Type: application/json
+Authorization: Basic rs 123
+
+{
+  "username": "rs1",
+  "operation": "UNLOCK"
+}
+
+
+### Perform transaction as merchant, should 200
+POST http://localhost:28852/api/antifraud/transaction
+Content-Type: application/json
+Authorization: Basic rs1 123
+
+{
+  "amount": 100
+}
+
+### Change role to support, should 200
+PUT http://localhost:28852/api/auth/role
+Content-Type: application/json
+Authorization: Basic rs 123
+
+{
+  "username": "rs1",
+  "role": "SUPPORT"
+}
