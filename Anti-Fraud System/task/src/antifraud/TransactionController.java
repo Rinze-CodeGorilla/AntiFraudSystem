@@ -8,8 +8,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -36,17 +34,10 @@ public class TransactionController {
         List<String> manualInfos = new ArrayList<>();
         List<String> prohibitedInfos = new ArrayList<>();
 
-        Map<Function<TransactionRequest, TransactionResult>, String> checks = Map.of(
-                transactionChecker::checkAmount, "amount",
-                transactionChecker::checkIp, "ip",
-                transactionChecker::checkCardNumber, "card-number",
-                transactionChecker::checkRegionCorrelation, "region-correlation",
-                transactionChecker::checkIpCorrelation, "ip-correlation"
-        );
-        checks.entrySet().forEach((check -> {
+        transactionChecker.getChecks().entrySet().forEach((check -> {
             var method = check.getKey();
             var description = check.getValue();
-            switch(method.apply(transaction)) {
+            switch (method.apply(transaction)) {
                 case MANUAL_PROCESSING -> manualInfos.add(description);
                 case PROHIBITED -> prohibitedInfos.add(description);
             }

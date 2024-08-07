@@ -2,6 +2,9 @@ package antifraud;
 
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+import java.util.function.Function;
+
 @Component
 public class TransactionChecker {
     private final IpRepository ipRepository;
@@ -14,6 +17,16 @@ public class TransactionChecker {
         this.transactionRepository = transactionRepository;
     }
 
+    Map<Function<TransactionController.TransactionRequest, TransactionResult>, String> getChecks() {
+        return Map.of(
+                this::checkAmount, "amount",
+                this::checkIp, "ip",
+                this::checkCardNumber, "card-number",
+                this::checkRegionCorrelation, "region-correlation",
+                this::checkIpCorrelation, "ip-correlation"
+        );
+    }
+
     TransactionResult checkIp(TransactionController.TransactionRequest t) {
         return ipRepository.existsByIp(t.ip()) ? TransactionResult.PROHIBITED : TransactionResult.ALLOWED;
     }
@@ -23,14 +36,14 @@ public class TransactionChecker {
     }
 
     TransactionResult checkRegionCorrelation(TransactionController.TransactionRequest t) {
-            var regions = transactionRepository.findDistinctRegionByRegionIsNotAndDateBetweenAndNumber(
-                    t.region(), t.date().minusHours(1), t.date(), t.number());
-            if (regions.size() > 2) {
-                return TransactionResult.PROHIBITED;
-            } else if (regions.size() == 2) {
-                return TransactionResult.MANUAL_PROCESSING;
-            }
-            return TransactionResult.ALLOWED;
+        var regions = transactionRepository.findDistinctRegionByRegionIsNotAndDateBetweenAndNumber(
+                t.region(), t.date().minusHours(1), t.date(), t.number());
+        if (regions.size() > 2) {
+            return TransactionResult.PROHIBITED;
+        } else if (regions.size() == 2) {
+            return TransactionResult.MANUAL_PROCESSING;
+        }
+        return TransactionResult.ALLOWED;
     }
 
     TransactionResult checkIpCorrelation(TransactionController.TransactionRequest t) {
@@ -46,8 +59,12 @@ public class TransactionChecker {
 
     TransactionResult checkAmount(TransactionController.TransactionRequest t) {
         var previousTransactions = transactionRepository.findByNumberOrderById(t.number());
-        long allowedAmount = previousTransactions.stream().reduce(200L, this::processAllowedAmount, (a, b) -> {throw new RuntimeException();});
-        long manualAmount = previousTransactions.stream().reduce(1500L, this::processManualAmount, (a, b) -> {throw new RuntimeException();});
+        long allowedAmount = previousTransactions.stream().reduce(200L, this::processAllowedAmount, (a, b) -> {
+            throw new RuntimeException("Transaction processing can only occur in order");
+        });
+        long manualAmount = previousTransactions.stream().reduce(1500L, this::processManualAmount, (a, b) -> {
+            throw new RuntimeException("Transaction processing can only occur in order");
+        });
         if (t.amount() > manualAmount) {
             return TransactionResult.PROHIBITED;
         }
