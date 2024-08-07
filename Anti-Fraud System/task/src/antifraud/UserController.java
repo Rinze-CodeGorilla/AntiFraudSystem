@@ -1,6 +1,7 @@
 package antifraud;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -77,7 +78,7 @@ public class UserController {
 
     record LockRequest(@NotNull String username, @NotNull LockOperation operation){}
     record UpdateRoleRequest(@NotNull String username, @NotNull Role role) {}
-    record CreateUserRequest(@NotNull String name, @NotNull String username, @NotNull String password) {}
+    record CreateUserRequest(@NotNull String name, @NotBlank String username, @NotNull String password) {}
     record UserResponse(long id, String name, String username, Role role) {
         UserResponse(User user) {
             this(user.id, user.name, user.username, user.role);

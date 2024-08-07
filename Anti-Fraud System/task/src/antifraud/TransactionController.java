@@ -8,7 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.LongBinaryOperator;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -19,11 +20,13 @@ public class TransactionController {
     private final IpRepository ipRepository;
     private final CardRepository cardRepository;
     private final TransactionRepository transactionRepository;
+    private final TransactionChecker transactionChecker;
 
-    TransactionController(IpRepository ipRepository, CardRepository cardRepository, TransactionRepository transactionRepository) {
+    TransactionController(IpRepository ipRepository, CardRepository cardRepository, TransactionRepository transactionRepository, TransactionChecker transactionChecker) {
         this.ipRepository = ipRepository;
         this.cardRepository = cardRepository;
         this.transactionRepository = transactionRepository;
+        this.transactionChecker = transactionChecker;
     }
 
     @PostMapping("/transaction")
@@ -32,57 +35,25 @@ public class TransactionController {
         if (!IP.verify(transaction.ip)) throw new BadRequestException();
         List<String> manualInfos = new ArrayList<>();
         List<String> prohibitedInfos = new ArrayList<>();
-        long manualAmount = 1500;
-        long allowedAmount = 200;
-        var previousTransactions = transactionRepository.findByNumberOrderById(transaction.number);
-        LongBinaryOperator adjustUp = (old, amount) -> (long)Math.ceil(.8 * old + .2 * amount);
-        LongBinaryOperator adjustDown = (old, amount) -> (long)Math.ceil(.8 * old - .2 * amount);
-        for (var t :
-                previousTransactions) {
-            if (t.feedback == TransactionResult.ALLOWED) {
-                allowedAmount = adjustUp.applyAsLong(allowedAmount, t.amount);
+
+        Map<Function<TransactionRequest, TransactionResult>, String> checks = Map.of(
+                transactionChecker::checkAmount, "amount",
+                transactionChecker::checkIp, "ip",
+                transactionChecker::checkCardNumber, "card-number",
+                transactionChecker::checkRegionCorrelation, "region-correlation",
+                transactionChecker::checkIpCorrelation, "ip-correlation"
+        );
+        checks.entrySet().forEach((check -> {
+            var method = check.getKey();
+            var description = check.getValue();
+            switch(method.apply(transaction)) {
+                case MANUAL_PROCESSING -> manualInfos.add(description);
+                case PROHIBITED -> prohibitedInfos.add(description);
             }
-            if (t.feedback == TransactionResult.PROHIBITED) {
-                manualAmount = adjustDown.applyAsLong(manualAmount, t.amount);
-            }
-            if (t.feedback != null) {
-                if (t.result == TransactionResult.ALLOWED) {
-                    allowedAmount = adjustDown.applyAsLong(allowedAmount, t.amount);
-                }
-                if (t.result == TransactionResult.PROHIBITED) {
-                    manualAmount = adjustUp.applyAsLong(manualAmount, t.amount);
-                }
-            }
-        }
-        TransactionResult status;
-        if (transaction.amount <= allowedAmount) {
-            //do nothing
-        } else if (transaction.amount <= manualAmount) {
-            manualInfos.add("amount");
-        } else {
-            prohibitedInfos.add("amount");
-        }
-        if (ipRepository.existsByIp(transaction.ip)) {
-            prohibitedInfos.add("ip");
-        }
-        if (cardRepository.existsByNumber(transaction.number)) {
-            prohibitedInfos.add("card-number");
-        }
-        var regions = transactionRepository.findDistinctRegionByRegionIsNotAndDateBetweenAndNumber(
-                transaction.region, transaction.date.minusHours(1), transaction.date, transaction.number);
-        if (regions.size() > 2) {
-            prohibitedInfos.add("region-correlation");
-        } else if (regions.size() == 2) {
-            manualInfos.add("region-correlation");
-        }
-        var ips = transactionRepository.findDistinctIpByIpIsNotAndDateBetweenAndNumber(
-                transaction.ip, transaction.date.minusHours(1), transaction.date, transaction.number);
-        if (ips.size() > 2) {
-            prohibitedInfos.add("ip-correlation");
-        } else if (ips.size() == 2) {
-            manualInfos.add("ip-correlation");
-        }
+        }));
+
         List<String> infos;
+        TransactionResult status;
         if (!prohibitedInfos.isEmpty()) {
             infos = prohibitedInfos;
             status = TransactionResult.PROHIBITED;
@@ -90,11 +61,10 @@ public class TransactionController {
             infos = manualInfos;
             status = TransactionResult.MANUAL_PROCESSING;
         } else {
-            infos = List.of();
+            infos = List.of("none");
             status = TransactionResult.ALLOWED;
         }
         String info = infos.stream().sorted().collect(Collectors.joining(", "));
-        if (info.isEmpty()) info = "none";
         transactionRepository.save(new Transaction(
                 transaction.amount,
                 transaction.ip,
