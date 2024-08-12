@@ -29,7 +29,8 @@ public class TransactionController {
 
     @PostMapping("/transaction")
     TransactionResultResponse handle(@Valid @RequestBody TransactionRequest transaction) throws BadRequestException {
-        if (!Card.IsValidLuhn(transaction.number)) throw new BadRequestException();
+        // switched to custom annotation in TransactionRequest
+        //        if (!Card.IsValidLuhn(transaction.number)) throw new BadRequestException();
         if (!IP.verify(transaction.ip)) throw new BadRequestException();
         List<String> manualInfos = new ArrayList<>();
         List<String> prohibitedInfos = new ArrayList<>();
@@ -129,7 +130,7 @@ public class TransactionController {
         return new TransactionResponse(transactionRepository.save(transaction));
     }
 
-    record TransactionRequest(@Min(1) long amount, @NotNull String ip, @NotNull String number, @NotNull Region region,
+    record TransactionRequest(@Min(1) long amount, @NotNull String ip, @NotNull @Luhn String number, @NotNull Region region,
                               @NotNull LocalDateTime date) {
     }
 
