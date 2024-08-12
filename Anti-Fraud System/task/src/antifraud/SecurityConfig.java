@@ -1,5 +1,8 @@
 package antifraud;
 
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
@@ -20,6 +23,17 @@ import org.springframework.security.web.util.matcher.IpAddressMatcher;
 public class SecurityConfig {
     @Autowired
     RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+
+    @Bean
+    @Order(2)
+    public SecurityFilterChain swaggerFilter(HttpSecurity http) throws Exception {
+        return http.securityMatcher("/swagger-ui*/**", "/v3/api-docs/**").authorizeHttpRequests(s -> s.anyRequest().permitAll()).build();
+    }
+
+    @Bean
+    OpenAPI customOpenAPI() {
+        return new OpenAPI().components(new Components().addSecuritySchemes("basic", new SecurityScheme().type(SecurityScheme.Type.HTTP).scheme("basic")));
+    }
 
     @Bean
     @Order(1)

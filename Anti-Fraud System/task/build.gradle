@@ -22,6 +22,8 @@ repositories {
 sourceSets.main.resources.srcDirs = ["src/resources"]
 
 dependencies {
+    implementation 'org.springdoc:springdoc-openapi-security:2.6.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-web'
