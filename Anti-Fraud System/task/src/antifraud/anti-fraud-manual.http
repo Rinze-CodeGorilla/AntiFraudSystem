@@ -55,3 +55,18 @@ Authorization: Basic rs 123
   "username": "rs1",
   "role": "SUPPORT"
 }
+
+### List all users
+GET http://localhost:28852/api/auth/list
+Content-Type: application/json
+Authorization: Basic rs 123
+
+### Change role to merchant, should 200
+PUT http://localhost:28852/api/auth/role
+Content-Type: application/json
+Authorization: Basic rs 123
+
+{
+  "username": "rs1",
+  "role": "MERCHANT"
+}

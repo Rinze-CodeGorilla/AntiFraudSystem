@@ -4,6 +4,7 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
@@ -37,6 +38,7 @@ public class SecurityConfig {
 
     @Bean
     @Order(1)
+    @ConditionalOnExpression("'${spring.datasource.url}'.startsWith('jdbc:h2:')")
     public SecurityFilterChain h2Filter(HttpSecurity http) throws Exception {
         IpAddressMatcher a = new IpAddressMatcher("127.0.0.1");
         IpAddressMatcher b = new IpAddressMatcher("[::1]");
