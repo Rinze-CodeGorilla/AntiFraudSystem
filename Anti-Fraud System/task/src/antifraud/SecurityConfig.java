@@ -70,6 +70,7 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .csrf().disable()
+                .cors().disable()
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers(HttpMethod.POST, "/api/auth/user").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/auth/user/{username}").hasRole(Role.ADMINISTRATOR.name())
